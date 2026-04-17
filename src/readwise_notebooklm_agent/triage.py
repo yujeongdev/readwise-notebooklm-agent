@@ -17,20 +17,53 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-VAULT = Path(os.environ.get("OBSIDIAN_VAULT", str(Path.home() / "workspaces" / "obsidian")))
+VAULT = Path(os.environ.get("READWISE_NOTEBOOKLM_OBSIDIAN_VAULT") or os.environ.get("OBSIDIAN_VAULT") or str(Path.home() / "workspaces" / "obsidian"))
 READWISE_DATA = VAULT / ".obsidian" / "plugins" / "readwise-official" / "data.json"
 OUT_DIR = VAULT / "900_Articles" / "Article Inbox"
 API_BASE = "https://readwise.io/api/v3"
 
-KEYWORD_GROUPS = {
-    "robotics": (["robot", "robotics", "robotic", "manipulation", "humanoid", "dexterous", "gripper", "tactile"], 6),
-    "vla": (["vla", "vision-language-action", "vision language action", "embodied", "physical ai", "gemini robotics"], 7),
-    "sim2real": (["sim2real", "sim-to-real", "real2sim", "simulation", "simulator", "digital twin", "omniverse", "isaac", "mujoco", "physics-aware", "synthetic data"], 6),
-    "rl": (["reinforcement", " rl", "reward", "policy", "imitation", "preference", "benchmark", "stage-aware"], 4),
-    "agents": (["agent", "codex", "claude code", "openclaw", "mcp", "harness", "context", "multi-agent", "agentic", "knowledge base"], 5),
-    "infra": (["vllm", "serving", "gpu", "cluster", "inference", "pagedattention", "kubernetes", "osmo"], 3),
-    "career": (["career", "resume", "cv", "portfolio", "hiring", "job", "이력서", "채용", "생존"], 3),
+DEFAULT_DOMAIN_GROUPS: dict[str, tuple[list[str], int]] = {
+    "general": (["research", "article", "paper", "guide", "tutorial", "analysis"], 1),
+    "technical": (["engineering", "software", "system", "architecture", "api", "workflow"], 2),
+    "ai": (["ai", "llm", "machine learning", "model", "agent", "automation"], 2),
 }
+
+
+class DomainConfigError(ValueError):
+    """Raised when a custom domain scoring config has an invalid schema."""
+
+
+def _normalize_domain_config(raw: dict) -> dict[str, tuple[list[str], int]]:
+    if not isinstance(raw, dict):
+        raise DomainConfigError("domain config must be a JSON object")
+    groups: dict[str, tuple[list[str], int]] = {}
+    for name, spec in raw.items():
+        if isinstance(spec, dict):
+            keywords = spec.get("keywords", [])
+            weight_value = spec.get("weight", 3)
+        elif isinstance(spec, list):
+            keywords = spec
+            weight_value = 3
+        else:
+            raise DomainConfigError(f"domain {name!r} must be an object or keyword list")
+        if isinstance(keywords, str) or not isinstance(keywords, list):
+            raise DomainConfigError(f"domain {name!r} keywords must be a list")
+        try:
+            weight = int(weight_value)
+        except (TypeError, ValueError) as exc:
+            raise DomainConfigError(f"domain {name!r} weight must be an integer") from exc
+        groups[str(name)] = ([str(k).lower() for k in keywords], weight)
+    return groups
+
+
+def load_domain_groups(domains_file: str | None = None) -> dict[str, tuple[list[str], int]]:
+    domains_file = domains_file or os.environ.get("READWISE_NOTEBOOKLM_DOMAINS_FILE")
+    groups = dict(DEFAULT_DOMAIN_GROUPS)
+    if domains_file:
+        with open(domains_file, "r", encoding="utf-8") as f:
+            custom = _normalize_domain_config(json.load(f))
+        groups.update(custom)
+    return groups
 
 
 def load_token() -> str:
@@ -104,15 +137,16 @@ def fetch_docs(token: str, *, updated_after: str | None, location: str | None, c
     return docs
 
 
-def score_doc(doc: dict, domains: list[str]) -> tuple[int, list[str]]:
+def score_doc(doc: dict, domains: list[str], keyword_groups: dict[str, tuple[list[str], int]] | None = None) -> tuple[int, list[str]]:
     text = " ".join(str(doc.get(k) or "") for k in ["title", "summary", "source_url", "url", "site_name", "notes", "category"]).lower()
     tags = doc.get("tags") or {}
     text += " " + " ".join(tags.keys() if isinstance(tags, dict) else [str(tags)])
-    selected = domains or ["robotics", "vla", "sim2real", "rl", "agents", "infra", "career"]
+    keyword_groups = keyword_groups or DEFAULT_DOMAIN_GROUPS
+    selected = domains or list(keyword_groups)
     score = 0
     reasons = []
     for domain in selected:
-        kws, weight = KEYWORD_GROUPS.get(domain, ([domain], 3))
+        kws, weight = keyword_groups.get(domain, ([domain], 3))
         hits = [k for k in kws if k in text]
         if hits:
             inc = weight * min(3, len(hits))
@@ -196,18 +230,23 @@ def write_obsidian(items: list[tuple[int, list[str], dict]], top: int, out: Path
     return out
 
 
+def domains_from_reasons(reasons: list[str]) -> list[str]:
+    domains: list[str] = []
+    for reason in reasons:
+        if ":" not in reason:
+            continue
+        domain = reason.split(":", 1)[0].strip()
+        if domain and domain not in domains and domain != "needs-browser-fallback":
+            domains.append(domain)
+    return domains
+
+
 def make_nlm_command(doc: dict, reasons: list[str]) -> str:
     src = doc.get("source_url") or doc.get("url") or ""
     title = doc.get("title") or "Untitled"
     typ = classify_type(doc)
     why = (doc.get("summary") or "Readwise API triage candidate")[:220].replace("\n", " ")
-    domains = []
-    joined = " ".join(reasons).lower()
-    for d in ["robotics", "sim2real", "vla", "rl", "agents", "infra", "career"]:
-        if d in joined:
-            domains.append(d)
-    if not domains:
-        domains = ["robotics"]
+    domains = domains_from_reasons(reasons)
     parts = ["readwise-nlm-deepdive", shell_quote(src), "--title", shell_quote(title), "--type", typ, "--why", shell_quote(why)]
     for d in domains[:4]:
         parts += ["--domain", d]
@@ -216,7 +255,6 @@ def make_nlm_command(doc: dict, reasons: list[str]) -> str:
 
 
 def to_nlm(doc: dict, reasons: list[str], dry_run: bool) -> int:
-    cmd = make_nlm_command(doc, reasons).split(" ")
     # Use shell for robust Korean/quote handling from make_nlm_command.
     command = make_nlm_command(doc, reasons)
     if dry_run:
@@ -249,7 +287,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--location", choices=["new", "later", "shortlist", "archive", "feed"], help="Reader location filter.")
     ap.add_argument("--category", choices=["article", "email", "rss", "highlight", "note", "pdf", "epub", "tweet", "video"], help="Reader category filter.")
     ap.add_argument("--tag", action="append", default=[], help="Reader tag filter; repeatable, AND semantics.")
-    ap.add_argument("--domain", action="append", default=[], help="Scoring domain: robotics, vla, sim2real, rl, agents, infra, career; repeatable.")
+    ap.add_argument("--domain", action="append", default=[], help="Scoring domain name from built-ins or --domains-file; repeatable.")
+    ap.add_argument("--domains-file", help="Optional JSON domain keyword config merged over built-ins. Can also be set with READWISE_NOTEBOOKLM_DOMAINS_FILE.")
     ap.add_argument("--top", type=int, default=20)
     ap.add_argument("--pages", type=int, default=3, help="Max API pages of 100 docs.")
     ap.add_argument("--write-obsidian", action="store_true")
@@ -264,11 +303,15 @@ def main(argv: list[str] | None = None) -> int:
         update_docs(token, args.archive, location="archive", tags=None, dry_run=args.dry_run); return 0
     if args.later is not None:
         update_docs(token, args.later, location="later", tags=None, dry_run=args.dry_run); return 0
+    try:
+        keyword_groups = load_domain_groups(args.domains_file)
+    except (OSError, json.JSONDecodeError, DomainConfigError) as exc:
+        raise SystemExit(f"Could not load domain config: {exc}") from exc
     updated_after=args.updated_after or kst_days_ago_iso(args.days)
     docs=fetch_docs(token, updated_after=updated_after, location=args.location, category=args.category, tag=args.tag, limit_pages=args.pages, with_html=False, with_raw=False)
     items=[]
     for d in docs:
-        score, reasons = score_doc(d, args.domain)
+        score, reasons = score_doc(d, args.domain, keyword_groups)
         if score > 0:
             items.append((score, reasons, d))
     items.sort(key=lambda x: (x[0], x[2].get("updated_at") or ""), reverse=True)
@@ -280,13 +323,13 @@ def main(argv: list[str] | None = None) -> int:
         exact=fetch_docs(token, updated_after=None, location=None, category=None, tag=[], limit_pages=1, with_html=False, with_raw=False)
         for d in exact:
             if d.get("id") == args.to_nlm:
-                score, reasons=score_doc(d,args.domain)
+                score, reasons=score_doc(d,args.domain, keyword_groups)
                 return to_nlm(d,reasons,args.dry_run)
         data=request_json("/list/", {"id": args.to_nlm, "limit":"1"}, token)
         docs2=data.get("results", [])
         if not docs2:
             raise SystemExit(f"Document not found: {args.to_nlm}")
-        score,reasons=score_doc(docs2[0], args.domain)
+        score,reasons=score_doc(docs2[0], args.domain, keyword_groups)
         return to_nlm(docs2[0], reasons, args.dry_run)
     print(f"Fetched {len(docs)} docs since {updated_after}; scored {len(items)} candidates.")
     print_docs(items, args.top)

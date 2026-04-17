@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
-VAULT = Path(os.environ.get("OBSIDIAN_VAULT", str(Path.home() / "workspaces" / "obsidian")))
+VAULT = Path(os.environ.get("READWISE_NOTEBOOKLM_OBSIDIAN_VAULT") or os.environ.get("OBSIDIAN_VAULT") or str(Path.home() / "workspaces" / "obsidian"))
 ARTICLE_DIR = VAULT / "900_Articles" / "Articles"
 DEFAULT_PROFILE = os.environ.get("NLM_PROFILE", "default")
 

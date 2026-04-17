@@ -1,0 +1,30 @@
+{
+  "robotics": {
+    "weight": 6,
+    "keywords": ["robot", "robotics", "robotic", "manipulation", "humanoid", "dexterous", "gripper", "tactile"]
+  },
+  "vla": {
+    "weight": 7,
+    "keywords": ["vla", "vision-language-action", "vision language action", "embodied", "physical ai", "gemini robotics"]
+  },
+  "sim2real": {
+    "weight": 6,
+    "keywords": ["sim2real", "sim-to-real", "real2sim", "simulation", "simulator", "digital twin", "omniverse", "isaac", "mujoco", "physics-aware", "synthetic data"]
+  },
+  "rl": {
+    "weight": 4,
+    "keywords": ["reinforcement", " rl", "reward", "policy", "imitation", "preference", "benchmark", "stage-aware"]
+  },
+  "agents": {
+    "weight": 5,
+    "keywords": ["agent", "codex", "claude code", "openclaw", "mcp", "harness", "context", "multi-agent", "agentic", "knowledge base"]
+  },
+  "infra": {
+    "weight": 3,
+    "keywords": ["vllm", "serving", "gpu", "cluster", "inference", "pagedattention", "kubernetes", "osmo"]
+  },
+  "career": {
+    "weight": 3,
+    "keywords": ["career", "resume", "cv", "portfolio", "hiring", "job", "이력서", "채용", "생존"]
+  }
+}
