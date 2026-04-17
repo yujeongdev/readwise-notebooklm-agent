@@ -288,9 +288,19 @@ Remove `--dry-run` only after the user clearly wants the mutation.
 
 ## Development
 
+This repo is dependency-light and includes a `uv.lock` so agents can use a
+consistent Python workflow without guessing tool setup.
+
+```bash
+uv run python -m compileall src tests
+PYTHONPATH=src uv run python -m unittest discover -s tests -v
+PYTHONPATH=src uv run python -m readwise_notebooklm_agent.triage --help
+PYTHONPATH=src uv run python -m readwise_notebooklm_agent.deepdive --help
+```
+
+Plain Python also works because the package has no runtime dependencies:
+
 ```bash
 python -m compileall src tests
-python -m unittest discover -s tests -v
-python -m readwise_notebooklm_agent.triage --help
-python -m readwise_notebooklm_agent.deepdive --help
+PYTHONPATH=src python -m unittest discover -s tests -v
 ```
