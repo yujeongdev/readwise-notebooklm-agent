@@ -17,12 +17,14 @@ Help agents reliably:
 
 ```bash
 readwise-api-triage --days 7 --location new \
+  --domains-file examples/domains.robotics-sim2real.sample.json \
   --domain robotics --domain vla --domain sim2real \
   --top 20 --write-obsidian
 ```
 
 ```bash
 readwise-api-triage --days 7 --location new \
+  --domains-file examples/domains.robotics-sim2real.sample.json \
   --domain robotics --domain vla --domain sim2real \
   --to-nlm <reader-document-id>
 ```
@@ -45,6 +47,16 @@ readwise-nlm-deepdive "<canonical-url>" \
   do not manually compute UTC unless the user asks for an explicit window.
 - Write durable outputs into the Obsidian vault via `--write-obsidian` or the
   deep-dive helper's source-note scaffold.
+
+
+## Domain customization
+
+Do not assume every user wants the author's robotics/sim2real domains. The
+package defaults are generic. For specialized workflows, ask for or create a
+`--domains-file` JSON config. The bundled robotics/VLA/sim2real file under
+`examples/` is only a sample; copy and edit it for the current user's interests.
+
+Agents should mention which domain file was used when reporting triage results.
 
 ## OpenClaw / Browser Automation
 
@@ -87,3 +99,10 @@ python -m readwise_notebooklm_agent.deepdive --help >/tmp/deepdive-help.txt
 
 Use conventional commits where possible and include rationale in the body when
 behavior changes.
+
+## Environment variables
+
+- `READWISE_NOTEBOOKLM_OBSIDIAN_VAULT`: preferred Obsidian vault path for these tools.
+- `OBSIDIAN_VAULT`: backwards-compatible fallback vault path.
+- `READWISE_NOTEBOOKLM_DOMAINS_FILE`: optional default domain JSON file so agents do not need to pass `--domains-file` every time.
+- `READWISE_TOKEN`: optional Readwise token override; otherwise the tool reads the Obsidian Readwise plugin config.

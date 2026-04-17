@@ -75,7 +75,8 @@ Never print this token in agent logs or public output.
 Set this if your vault is not at `~/workspaces/obsidian`:
 
 ```bash
-export OBSIDIAN_VAULT="$HOME/workspaces/obsidian"
+export READWISE_NOTEBOOKLM_OBSIDIAN_VAULT="$HOME/workspaces/obsidian"
+# OBSIDIAN_VAULT is also supported as a fallback.
 ```
 
 ### 3. NotebookLM CLI
@@ -94,12 +95,25 @@ Optional but recommended:
 nlm config set auth.browser chrome
 ```
 
+## Environment variables
+
+```bash
+export READWISE_NOTEBOOKLM_OBSIDIAN_VAULT="$HOME/workspaces/obsidian"
+export READWISE_NOTEBOOKLM_DOMAINS_FILE="$HOME/.config/readwise-notebooklm-agent/domains.json"
+# Optional token override. If omitted, the tool reads the Obsidian Readwise plugin config.
+export READWISE_TOKEN="..."
+```
+
+`OBSIDIAN_VAULT` is also supported as a backwards-compatible fallback, but
+`READWISE_NOTEBOOKLM_OBSIDIAN_VAULT` is preferred for this tool.
+
 ## Quick start
 
 ### List recent Reader candidates
 
 ```bash
 readwise-api-triage --days 7 --location new \
+  --domains-file examples/domains.robotics-sim2real.sample.json \
   --domain robotics --domain vla --domain sim2real \
   --top 20
 ```
@@ -108,6 +122,7 @@ readwise-api-triage --days 7 --location new \
 
 ```bash
 readwise-api-triage --days 7 --location new \
+  --domains-file examples/domains.robotics-sim2real.sample.json \
   --domain robotics --domain vla --domain sim2real \
   --top 20 --write-obsidian
 ```
@@ -124,6 +139,7 @@ Copy the `id` from the triage output, then run:
 
 ```bash
 readwise-api-triage --days 7 --location new \
+  --domains-file examples/domains.robotics-sim2real.sample.json \
   --domain robotics --domain vla --domain sim2real \
   --to-nlm <reader-document-id>
 ```
@@ -149,6 +165,36 @@ Preview first without creating NotebookLM objects:
 ```bash
 readwise-nlm-deepdive "https://example.com/article" --title "Example" --dry-run
 ```
+
+
+## Custom domain scoring
+
+The package defaults are intentionally generic (`general`, `technical`, `ai`).
+Most users should provide their own domain file instead of relying on the
+author's interests.
+
+A sample robotics/VLA/sim2real config is included at:
+
+```text
+examples/domains.robotics-sim2real.sample.json
+```
+
+Copy it and edit it for your own reading domains:
+
+```bash
+cp examples/domains.robotics-sim2real.sample.json ~/.config/readwise-notebooklm-agent/domains.json
+```
+
+Then use it:
+
+```bash
+readwise-api-triage --days 7 --location new \
+  --domains-file ~/.config/readwise-notebooklm-agent/domains.json \
+  --domain <your-domain> --top 20
+```
+
+See [`docs/domain-scoring.md`](docs/domain-scoring.md) for the JSON shape and
+contribution guidelines.
 
 ## Agent operating model
 

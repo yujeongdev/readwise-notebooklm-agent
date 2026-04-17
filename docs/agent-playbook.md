@@ -35,3 +35,12 @@ Career default:
 ```bash
 --domain career --domain agents
 ```
+
+## Domain customization
+
+Do not assume every user wants the author's robotics/sim2real domains. The
+package defaults are generic. For specialized workflows, ask for or create a
+`--domains-file` JSON config. The bundled robotics/VLA/sim2real file under
+`examples/` is only a sample; copy and edit it for the current user's interests.
+
+Agents should mention which domain file was used when reporting triage results.
