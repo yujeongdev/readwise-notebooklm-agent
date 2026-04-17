@@ -271,7 +271,9 @@ def unique_path(path: Path) -> Path:
     raise SystemExit(f"Could not find unique filename for {path}")
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
     parser = argparse.ArgumentParser(description="Create NotebookLM deep-dive notebook + Obsidian source note from a Readwise original link.")
     parser.add_argument("url", help="Readwise original link / canonical source URL")
     parser.add_argument("--title", help="Human-readable title. If omitted, inferred from URL path.")

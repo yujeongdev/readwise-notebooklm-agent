@@ -240,7 +240,9 @@ def update_docs(token: str, ids: list[str], *, location: str | None, tags: list[
     print(json.dumps(request_json("/bulk_update/", {}, token, method="PATCH", body={"updates": updates}), ensure_ascii=False, indent=2))
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
     ap=argparse.ArgumentParser(description="Triage Readwise Reader documents and hand off selected items to NotebookLM/Obsidian.")
     ap.add_argument("--days", type=int, default=7, help="KST days back, converted to UTC updatedAfter.")
     ap.add_argument("--updated-after", help="Explicit UTC ISO updatedAfter override.")
