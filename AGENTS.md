@@ -101,10 +101,7 @@ Default to read-only. For any command that changes external state:
 Run before claiming completion:
 
 ```bash
-python -m compileall src tests
-python -m unittest discover -s tests -v
-python -m readwise_notebooklm_agent.triage --help >/tmp/triage-help.txt
-python -m readwise_notebooklm_agent.deepdive --help >/tmp/deepdive-help.txt
+uv run --with-editable . readwise-notebooklm-check
 ```
 
 ## Commit Style

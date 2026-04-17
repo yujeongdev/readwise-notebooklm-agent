@@ -292,10 +292,7 @@ This repo is dependency-light and includes a `uv.lock` so agents can use a
 consistent Python workflow without guessing tool setup.
 
 ```bash
-uv run python -m compileall src tests
-PYTHONPATH=src uv run python -m unittest discover -s tests -v
-PYTHONPATH=src uv run python -m readwise_notebooklm_agent.triage --help
-PYTHONPATH=src uv run python -m readwise_notebooklm_agent.deepdive --help
+uv run --with-editable . readwise-notebooklm-check
 ```
 
 Plain Python also works because the package has no runtime dependencies:
