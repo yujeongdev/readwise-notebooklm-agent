@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "readwise-notebooklm-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "Agent-first Readwise Reader triage and one-source NotebookLM deep-dive helpers."
 readme = "README.md"
 requires-python = ">=3.10"
