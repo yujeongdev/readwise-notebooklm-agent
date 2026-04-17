@@ -3,6 +3,18 @@
 Claude/Codex/OpenClaw agents should treat this repo as a small, reliable tool
 surface for Readwise Reader triage and NotebookLM deep dives.
 
+
+## Readwise backend selection
+
+Default to `--backend auto`. In auto mode the helper uses the official
+`readwise` CLI when it is installed and falls back to direct Reader API v3 when
+it is not. Use `--backend readwise-cli` only when the official CLI is required;
+use `--backend api` for Python-only environments.
+
+Agents should prefer the official CLI for Readwise data access, but keep this
+package responsible for domain scoring, NotebookLM handoff, and Obsidian note
+creation.
+
 ## Fast Path
 
 If asked "Readwise에서 읽을만한 것 뽑아줘":
