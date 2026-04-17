@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-VAULT = Path(os.environ.get("OBSIDIAN_VAULT", str(Path.home() / "workspaces" / "obsidian")))
+VAULT = Path(os.environ.get("READWISE_NOTEBOOKLM_OBSIDIAN_VAULT") or os.environ.get("OBSIDIAN_VAULT") or str(Path.home() / "workspaces" / "obsidian"))
 READWISE_DATA = VAULT / ".obsidian" / "plugins" / "readwise-official" / "data.json"
 OUT_DIR = VAULT / "900_Articles" / "Article Inbox"
 API_BASE = "https://readwise.io/api/v3"
