@@ -57,7 +57,29 @@ python -m pip install --user git+https://github.com/yujeongdev/readwise-notebook
 
 ## Prerequisites
 
-### 1. Readwise token
+### 1. Official Readwise CLI (recommended)
+
+Install the official CLI when possible:
+
+```bash
+npm install -g @readwise/cli
+readwise login
+# or for headless setup:
+readwise login-with-token <your-access-token>
+```
+
+For safer agent use, consider read-only mode in the official CLI:
+
+```bash
+readwise config set readonly true
+readwise --refresh
+```
+
+`readwise-api-triage` defaults to `--backend auto`, which uses the official
+`readwise` CLI when it is available on `PATH`, and falls back to direct Reader
+API v3 otherwise.
+
+### 2. Readwise token
 
 `readwise-api-triage` reads credentials in this order:
 
@@ -70,7 +92,7 @@ python -m pip install --user git+https://github.com/yujeongdev/readwise-notebook
 
 Never print this token in agent logs or public output.
 
-### 2. Obsidian vault path
+### 3. Obsidian vault path
 
 Set this if your vault is not at `~/workspaces/obsidian`:
 
@@ -79,7 +101,7 @@ export READWISE_NOTEBOOKLM_OBSIDIAN_VAULT="$HOME/workspaces/obsidian"
 # OBSIDIAN_VAULT is also supported as a fallback.
 ```
 
-### 3. NotebookLM CLI
+### 4. NotebookLM CLI
 
 Install and authenticate `nlm`:
 
@@ -106,6 +128,24 @@ export READWISE_TOKEN="..."
 
 `OBSIDIAN_VAULT` is also supported as a backwards-compatible fallback, but
 `READWISE_NOTEBOOKLM_OBSIDIAN_VAULT` is preferred for this tool.
+
+
+## Backend selection
+
+```bash
+readwise-api-triage --backend auto         # default: official readwise CLI if present, else API
+readwise-api-triage --backend readwise-cli # require official readwise CLI
+readwise-api-triage --backend api          # force direct Reader API v3
+```
+
+Environment default:
+
+```bash
+export READWISE_NOTEBOOKLM_BACKEND=auto
+```
+
+Use `readwise-cli` when you want the official CLI to own auth/cache/API
+compatibility. Use `api` when running in a minimal Python-only environment.
 
 ## Quick start
 
@@ -248,9 +288,16 @@ Remove `--dry-run` only after the user clearly wants the mutation.
 
 ## Development
 
+This repo is dependency-light and includes a `uv.lock` so agents can use a
+consistent Python workflow without guessing tool setup.
+
+```bash
+uv run --with-editable . readwise-notebooklm-check
+```
+
+Plain Python also works because the package has no runtime dependencies:
+
 ```bash
 python -m compileall src tests
-python -m unittest discover -s tests -v
-python -m readwise_notebooklm_agent.triage --help
-python -m readwise_notebooklm_agent.deepdive --help
+PYTHONPATH=src python -m unittest discover -s tests -v
 ```

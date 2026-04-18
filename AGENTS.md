@@ -36,6 +36,18 @@ readwise-nlm-deepdive "<canonical-url>" \
   --why "<reason>"
 ```
 
+
+## Readwise backend selection
+
+Default to `--backend auto`. In auto mode the helper uses the official
+`readwise` CLI when it is installed and falls back to direct Reader API v3 when
+it is not. Use `--backend readwise-cli` only when the official CLI is required;
+use `--backend api` for Python-only environments.
+
+Agents should prefer the official CLI for Readwise data access, but keep this
+package responsible for domain scoring, NotebookLM handoff, and Obsidian note
+creation.
+
 ## Agent Defaults
 
 - Use `readwise-api-triage` when the task mentions recent Readwise items,
@@ -89,10 +101,7 @@ Default to read-only. For any command that changes external state:
 Run before claiming completion:
 
 ```bash
-python -m compileall src tests
-python -m unittest discover -s tests -v
-python -m readwise_notebooklm_agent.triage --help >/tmp/triage-help.txt
-python -m readwise_notebooklm_agent.deepdive --help >/tmp/deepdive-help.txt
+uv run --with-editable . readwise-notebooklm-check
 ```
 
 ## Commit Style

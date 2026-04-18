@@ -3,7 +3,7 @@ name: python
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
   python:
@@ -13,14 +13,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Compile package
-        run: python -m compileall src tests
-      - name: CLI help smoke tests
-        run: |
-          PYTHONPATH=src python -m readwise_notebooklm_agent.triage --help >/tmp/triage-help.txt
-          PYTHONPATH=src python -m readwise_notebooklm_agent.deepdive --help >/tmp/deepdive-help.txt
-      - name: Unit tests
-        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Local verification
+        run: uv run --with-editable . readwise-notebooklm-check
 
       - name: Install package and smoke console scripts
         run: |

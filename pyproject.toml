@@ -26,6 +26,7 @@ dependencies = []
 [project.scripts]
 readwise-api-triage = "readwise_notebooklm_agent.triage:main"
 readwise-nlm-deepdive = "readwise_notebooklm_agent.deepdive:main"
+readwise-notebooklm-check = "readwise_notebooklm_agent.dev:check"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/readwise_notebooklm_agent"]

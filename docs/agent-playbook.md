@@ -44,3 +44,14 @@ package defaults are generic. For specialized workflows, ask for or create a
 `examples/` is only a sample; copy and edit it for the current user's interests.
 
 Agents should mention which domain file was used when reporting triage results.
+
+## Readwise backend selection
+
+Default to `--backend auto`. In auto mode the helper uses the official
+`readwise` CLI when it is installed and falls back to direct Reader API v3 when
+it is not. Use `--backend readwise-cli` only when the official CLI is required;
+use `--backend api` for Python-only environments.
+
+Agents should prefer the official CLI for Readwise data access, but keep this
+package responsible for domain scoring, NotebookLM handoff, and Obsidian note
+creation.
