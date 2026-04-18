@@ -2,7 +2,7 @@ import json
 import unittest
 from unittest import mock
 
-from readwise_notebooklm_agent.readwise_backend import BackendError, ReadwiseCliBackend, make_backend
+from readwise_notebooklm_agent.readwise_backend import AutoFallbackBackend, BackendError, ReadwiseCliBackend, make_backend
 
 
 class ReadwiseCliBackendTests(unittest.TestCase):
@@ -35,7 +35,35 @@ class ReadwiseCliBackendTests(unittest.TestCase):
     def test_auto_backend_prefers_cli_when_available(self):
         with mock.patch.object(ReadwiseCliBackend, "is_available", return_value=True):
             backend = make_backend("auto", token_loader=lambda: "token")
-        self.assertIsInstance(backend, ReadwiseCliBackend)
+        self.assertIsInstance(backend, AutoFallbackBackend)
+        self.assertIsInstance(backend.primary, ReadwiseCliBackend)
+
+
+    def test_auto_backend_falls_back_when_cli_runtime_fails(self):
+        class FailingBackend:
+            name = "readwise-cli"
+
+            def list_documents(self, **kwargs):
+                raise BackendError("bad cli")
+
+        class ApiBackend:
+            name = "api"
+
+            def list_documents(self, **kwargs):
+                return [{"id": "fallback"}]
+
+        backend = AutoFallbackBackend(FailingBackend(), lambda: ApiBackend())
+        docs = backend.list_documents(
+            updated_after=None,
+            location=None,
+            category=None,
+            tag=[],
+            limit_pages=1,
+            with_html=False,
+            with_raw=False,
+        )
+        self.assertEqual(docs[0]["id"], "fallback")
+        self.assertEqual(backend.name, "api-fallback")
 
     def test_auto_backend_falls_back_to_api(self):
         with mock.patch.object(ReadwiseCliBackend, "is_available", return_value=False):

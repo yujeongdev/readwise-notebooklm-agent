@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -61,7 +62,7 @@ class ReaderApiBackend:
             except urllib.error.HTTPError as e:
                 if e.code == 429:
                     wait = int(e.headers.get("Retry-After", "5"))
-                    print(f"Rate limited; sleeping {wait}s")
+                    print(f"Rate limited; sleeping {wait}s", file=sys.stderr)
                     time.sleep(wait)
                     continue
                 detail = e.read().decode("utf-8", "replace")[:500]
@@ -207,6 +208,63 @@ class ReadwiseCliBackend:
         return {"results": results}
 
 
+@dataclass
+class AutoFallbackBackend:
+    primary: ReadwiseBackend
+    fallback_factory: object
+    name: str = "auto"
+
+    def _fallback(self) -> ReadwiseBackend:
+        fallback = self.fallback_factory()
+        self.name = f"{fallback.name}-fallback"
+        return fallback
+
+    def _run_with_fallback(self, operation: str, call):
+        try:
+            result = call(self.primary)
+            self.name = self.primary.name
+            return result
+        except BackendError as exc:
+            print(
+                f"Readwise {self.primary.name} backend failed during {operation}; falling back to API: {exc}",
+                file=sys.stderr,
+            )
+            return call(self._fallback())
+
+    def list_documents(
+        self,
+        *,
+        updated_after: str | None,
+        location: str | None,
+        category: str | None,
+        tag: list[str],
+        limit_pages: int,
+        with_html: bool,
+        with_raw: bool,
+    ) -> list[dict]:
+        return self._run_with_fallback(
+            "list_documents",
+            lambda backend: backend.list_documents(
+                updated_after=updated_after,
+                location=location,
+                category=category,
+                tag=tag,
+                limit_pages=limit_pages,
+                with_html=with_html,
+                with_raw=with_raw,
+            ),
+        )
+
+    def get_document(self, document_id: str) -> dict | None:
+        return self._run_with_fallback("get_document", lambda backend: backend.get_document(document_id))
+
+    def update_documents(self, updates: list[dict], *, dry_run: bool) -> dict:
+        return self._run_with_fallback(
+            "update_documents",
+            lambda backend: backend.update_documents(updates, dry_run=dry_run),
+        )
+
+
 def make_backend(kind: str, *, token_loader, cli_command: str = "readwise") -> ReadwiseBackend:
     if kind == "readwise-cli":
         if not ReadwiseCliBackend.is_available(cli_command):
@@ -216,6 +274,9 @@ def make_backend(kind: str, *, token_loader, cli_command: str = "readwise") -> R
         return ReaderApiBackend(token_loader())
     if kind == "auto":
         if ReadwiseCliBackend.is_available(cli_command):
-            return ReadwiseCliBackend(cli_command)
+            return AutoFallbackBackend(
+                ReadwiseCliBackend(cli_command),
+                lambda: ReaderApiBackend(token_loader()),
+            )
         return ReaderApiBackend(token_loader())
     raise BackendError(f"unknown Readwise backend: {kind}")
