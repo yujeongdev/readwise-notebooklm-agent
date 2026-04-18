@@ -30,6 +30,7 @@ def check() -> int:
     run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
     run([sys.executable, "-m", "readwise_notebooklm_agent.triage", "--help"])
     run([sys.executable, "-m", "readwise_notebooklm_agent.deepdive", "--help"])
+    run([sys.executable, "-m", "readwise_notebooklm_agent.skills", "--help"])
     return 0
 
 

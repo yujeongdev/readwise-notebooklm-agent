@@ -13,6 +13,25 @@ Help agents reliably:
 4. create one NotebookLM notebook per selected source;
 5. create or update the matching Obsidian source note.
 
+## Bundled Agent Skill
+
+This repository owns the source skill for Codex/Claude/Agents at:
+
+```text
+skills/readwise-notebooklm-deepdive/SKILL.md
+```
+
+After changing package behavior that affects agent workflows, update the bundled
+skill and verify installation with:
+
+```bash
+readwise-notebooklm-install-skills --dry-run
+readwise-notebooklm-install-skills --force
+```
+
+The installer copies the packaged template to `~/.codex/skills`,
+`~/.claude/skills`, and `~/.agents/skills` by default.
+
 ## Key Commands
 
 ```bash
