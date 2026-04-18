@@ -89,6 +89,32 @@ class DeepDiveTests(unittest.TestCase):
     def test_slugify_keeps_meaningful_prefix(self):
         self.assertIn("robot", deepdive.slugify("Robot Learning / Sim2Real", 40).lower())
 
+    def test_extract_arxiv_id_from_abs_url(self):
+        self.assertEqual(deepdive.extract_arxiv_id("https://arxiv.org/abs/2512.05107"), "2512.05107")
+
+    def test_extract_arxiv_id_from_pdf_url(self):
+        self.assertEqual(deepdive.extract_arxiv_id("https://arxiv.org/pdf/2512.05107.pdf"), "2512.05107")
+
+    def test_extract_arxiv_id_rejects_non_arxiv_hosts(self):
+        self.assertIsNone(deepdive.extract_arxiv_id("https://notarxiv.org/abs/2512.05107"))
+
+    def test_infer_title_uses_explicit_title_first(self):
+        with unittest.mock.patch.object(deepdive, "fetch_arxiv_title") as fetch:
+            title = deepdive.infer_title("https://arxiv.org/abs/2512.05107", "Custom Title")
+        self.assertEqual(title, "Custom Title")
+        fetch.assert_not_called()
+
+    def test_infer_title_fetches_arxiv_metadata(self):
+        with unittest.mock.patch.object(deepdive, "fetch_arxiv_title", return_value="Attention Is All You Need") as fetch:
+            title = deepdive.infer_title("https://arxiv.org/abs/1706.03762", None)
+        self.assertEqual(title, "Attention Is All You Need")
+        fetch.assert_called_once_with("1706.03762")
+
+    def test_infer_title_falls_back_when_arxiv_lookup_fails(self):
+        with unittest.mock.patch.object(deepdive, "fetch_arxiv_title", return_value=None):
+            title = deepdive.infer_title("https://arxiv.org/pdf/2512.05107.pdf", None)
+        self.assertEqual(title, "2512.05107")
+
 
 if __name__ == "__main__":
     unittest.main()
