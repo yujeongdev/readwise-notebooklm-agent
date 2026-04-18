@@ -200,6 +200,8 @@ readwise-nlm-deepdive "https://arxiv.org/pdf/2512.05107" \
   --tag notebooklm
 ```
 
+For arXiv links, `--title` is now optional. The helper will try the arXiv API first and use the paper's human-readable title automatically, then fall back to the URL-derived title if metadata lookup fails.
+
 Preview first without creating NotebookLM objects:
 
 ```bash

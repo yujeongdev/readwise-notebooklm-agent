@@ -15,6 +15,9 @@ import re
 import shlex
 import subprocess
 import sys
+import urllib.error
+import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -55,9 +58,58 @@ def safe_filename(value: str, max_len: int = 120) -> str:
     return (value[:max_len].strip(" .-") or "Untitled")
 
 
+def extract_arxiv_id(url: str) -> str | None:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    if host not in {"arxiv.org", "www.arxiv.org"}:
+        return None
+
+    path = parsed.path.strip("/")
+    if not path:
+        return None
+
+    if path.startswith("abs/"):
+        candidate = path.removeprefix("abs/")
+    elif path.startswith("pdf/"):
+        candidate = path.removeprefix("pdf/")
+    else:
+        return None
+
+    candidate = re.sub(r"\.pdf$", "", candidate, flags=re.I)
+    candidate = candidate.strip()
+    return candidate or None
+
+
+def fetch_arxiv_title(arxiv_id: str, *, timeout: float = 10.0) -> str | None:
+    api_url = f"https://export.arxiv.org/api/query?id_list={arxiv_id}"
+    try:
+        with urllib.request.urlopen(api_url, timeout=timeout) as response:
+            payload = response.read()
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return None
+
+    try:
+        root = ET.fromstring(payload)
+    except ET.ParseError:
+        return None
+
+    namespace = {"atom": "http://www.w3.org/2005/Atom"}
+    title_node = root.find("atom:entry/atom:title", namespace)
+    if title_node is None or not title_node.text:
+        return None
+
+    title = re.sub(r"\s+", " ", title_node.text).strip()
+    return title or None
+
+
 def infer_title(url: str, explicit: str | None) -> str:
     if explicit:
         return explicit.strip()
+    arxiv_id = extract_arxiv_id(url)
+    if arxiv_id:
+        arxiv_title = fetch_arxiv_title(arxiv_id)
+        if arxiv_title:
+            return arxiv_title
     parsed = urlparse(url)
     path_tail = Path(parsed.path.rstrip("/")).name if parsed.path else ""
     candidate = path_tail or parsed.netloc or "Untitled Source"
@@ -276,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
         argv = sys.argv[1:]
     parser = argparse.ArgumentParser(description="Create NotebookLM deep-dive notebook + Obsidian source note from a Readwise original link.")
     parser.add_argument("url", help="Readwise original link / canonical source URL")
-    parser.add_argument("--title", help="Human-readable title. If omitted, inferred from URL path.")
+    parser.add_argument("--title", help="Human-readable title. If omitted, inferred from source metadata when possible, otherwise from the URL path.")
     parser.add_argument("--type", choices=["auto", "article", "paper"], default="auto", help="Source type for Obsidian metadata and notebook prefix.")
     parser.add_argument("--why", default="", help="Why this source is being studied now.")
     parser.add_argument("--domain", action="append", default=[], help="Domain lens, repeatable. Example: --domain robotics --domain sim2real")
