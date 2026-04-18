@@ -259,10 +259,11 @@ class AutoFallbackBackend:
         return self._run_with_fallback("get_document", lambda backend: backend.get_document(document_id))
 
     def update_documents(self, updates: list[dict], *, dry_run: bool) -> dict:
-        return self._run_with_fallback(
-            "update_documents",
-            lambda backend: backend.update_documents(updates, dry_run=dry_run),
-        )
+        # Do not fall back for writes: official CLI readonly mode intentionally
+        # blocks mutations, and retrying through the token-based API would bypass
+        # that user safety setting.
+        self.name = self.primary.name
+        return self.primary.update_documents(updates, dry_run=dry_run)
 
 
 def make_backend(kind: str, *, token_loader, cli_command: str = "readwise") -> ReadwiseBackend:

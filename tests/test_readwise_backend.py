@@ -39,6 +39,25 @@ class ReadwiseCliBackendTests(unittest.TestCase):
         self.assertIsInstance(backend.primary, ReadwiseCliBackend)
 
 
+
+    def test_auto_backend_does_not_fallback_for_writes(self):
+        class FailingBackend:
+            name = "readwise-cli"
+
+            def update_documents(self, updates, *, dry_run):
+                raise BackendError("readonly")
+
+        class ApiBackend:
+            name = "api"
+
+            def update_documents(self, updates, *, dry_run):
+                return {"unexpected": True}
+
+        backend = AutoFallbackBackend(FailingBackend(), lambda: ApiBackend())
+        with self.assertRaises(BackendError):
+            backend.update_documents([{"id": "doc", "location": "archive"}], dry_run=False)
+        self.assertEqual(backend.name, "readwise-cli")
+
     def test_auto_backend_falls_back_when_cli_runtime_fails(self):
         class FailingBackend:
             name = "readwise-cli"
