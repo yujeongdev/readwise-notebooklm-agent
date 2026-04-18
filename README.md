@@ -22,8 +22,9 @@ notebook** for deep focused study.
 | --- | --- |
 | `readwise-api-triage` | Query Readwise Reader API v3, rank recent documents by domain relevance, write triage notes, and hand selected Reader items to NotebookLM. |
 | `readwise-nlm-deepdive` | Create a NotebookLM notebook from one canonical URL, add a Study Brief source, create an `nlm` alias, and scaffold an Obsidian source note. |
+| `readwise-notebooklm-install-skills` | Install the bundled Codex/Claude/Agents skill so coding agents know to use this package instead of ad-hoc scripts. |
 
-Both scripts are Python standard-library only. The NotebookLM command expects
+The CLI helpers are Python standard-library only. The NotebookLM command expects
 [`notebooklm-mcp-cli`](https://github.com/jacob-bd/notebooklm-mcp-cli) to provide
 `nlm`.
 
@@ -47,6 +48,33 @@ uv tool upgrade readwise-notebooklm-agent
 git clone https://github.com/yujeongdev/readwise-notebooklm-agent.git
 cd readwise-notebooklm-agent
 uv tool install --editable .
+```
+
+### Install agent skills
+
+After installing or upgrading the tool, install the bundled skill into Codex, Claude, and generic agent homes:
+
+```bash
+readwise-notebooklm-install-skills --force
+```
+
+Preview without writing files:
+
+```bash
+readwise-notebooklm-install-skills --dry-run
+```
+
+Install only one host when needed:
+
+```bash
+readwise-notebooklm-install-skills --target codex --force
+readwise-notebooklm-install-skills --target claude --force
+```
+
+The skill source is also visible in the repository at:
+
+```text
+skills/readwise-notebooklm-deepdive/SKILL.md
 ```
 
 Or without uv:

@@ -116,5 +116,62 @@ class DeepDiveTests(unittest.TestCase):
         self.assertEqual(title, "2512.05107")
 
 
+class SkillInstallerTests(unittest.TestCase):
+    def test_dry_run_does_not_write_skill(self):
+        from readwise_notebooklm_agent import skills
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            results = skills.install_skill(home=home, targets=["codex"], dry_run=True)
+            self.assertEqual(results[0].action, "would-create")
+            self.assertFalse((home / ".codex" / "skills" / skills.SKILL_NAME).exists())
+
+    def test_installs_codex_skill(self):
+        from readwise_notebooklm_agent import skills
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            results = skills.install_skill(home=home, targets=["codex"])
+            skill_file = home / ".codex" / "skills" / skills.SKILL_NAME / "SKILL.md"
+            self.assertEqual(results[0].action, "updated")
+            self.assertTrue(skill_file.exists())
+            self.assertIn("readwise-notebooklm-agent", skill_file.read_text())
+
+    def test_existing_skill_requires_force_to_overwrite(self):
+        from readwise_notebooklm_agent import skills
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            destination = home / ".codex" / "skills" / skills.SKILL_NAME
+            destination.mkdir(parents=True)
+            (destination / "SKILL.md").write_text("custom")
+            results = skills.install_skill(home=home, targets=["codex"], force=False)
+            self.assertEqual(results[0].action, "skipped-existing")
+            self.assertEqual((destination / "SKILL.md").read_text(), "custom")
+
+            forced = skills.install_skill(home=home, targets=["codex"], force=True)
+            self.assertEqual(forced[0].action, "updated")
+            self.assertIn("readwise-notebooklm-agent", (destination / "SKILL.md").read_text())
+
+    def test_dry_run_reports_existing_skill_without_failure_action(self):
+        from readwise_notebooklm_agent import skills
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            destination = home / ".codex" / "skills" / skills.SKILL_NAME
+            destination.mkdir(parents=True)
+            (destination / "SKILL.md").write_text("custom")
+            results = skills.install_skill(home=home, targets=["codex"], dry_run=True)
+            self.assertEqual(results[0].action, "would-update")
+            self.assertEqual((destination / "SKILL.md").read_text(), "custom")
+
+    def test_repo_skill_copy_matches_packaged_template(self):
+        from readwise_notebooklm_agent import skills
+
+        repo_copy = Path("skills") / skills.SKILL_NAME / "SKILL.md"
+        packaged_copy = skills.template_dir() / "SKILL.md"
+        self.assertEqual(repo_copy.read_text(), packaged_copy.read_text())
+
+
 if __name__ == "__main__":
     unittest.main()
