@@ -6,7 +6,17 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+def find_project_root() -> Path:
+    cwd = Path.cwd()
+    if (cwd / "pyproject.toml").exists() and (cwd / "tests").is_dir():
+        return cwd
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").exists() and (parent / "tests").is_dir():
+            return parent
+    raise SystemExit("readwise-notebooklm-check must be run from the project checkout")
+
+
+ROOT = find_project_root()
 
 
 def run(cmd: list[str]) -> None:
