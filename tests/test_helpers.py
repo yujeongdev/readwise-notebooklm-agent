@@ -153,7 +153,7 @@ class SkillInstallerTests(unittest.TestCase):
             self.assertEqual(forced[0].action, "updated")
             self.assertIn("readwise-notebooklm-agent", (destination / "SKILL.md").read_text())
 
-    def test_dry_run_reports_existing_skill_without_failure_action(self):
+    def test_dry_run_honors_existing_skill_without_force(self):
         from readwise_notebooklm_agent import skills
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -162,6 +162,18 @@ class SkillInstallerTests(unittest.TestCase):
             destination.mkdir(parents=True)
             (destination / "SKILL.md").write_text("custom")
             results = skills.install_skill(home=home, targets=["codex"], dry_run=True)
+            self.assertEqual(results[0].action, "skipped-existing")
+            self.assertEqual((destination / "SKILL.md").read_text(), "custom")
+
+    def test_force_dry_run_reports_existing_skill_update(self):
+        from readwise_notebooklm_agent import skills
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            destination = home / ".codex" / "skills" / skills.SKILL_NAME
+            destination.mkdir(parents=True)
+            (destination / "SKILL.md").write_text("custom")
+            results = skills.install_skill(home=home, targets=["codex"], force=True, dry_run=True)
             self.assertEqual(results[0].action, "would-update")
             self.assertEqual((destination / "SKILL.md").read_text(), "custom")
 

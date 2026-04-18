@@ -56,12 +56,12 @@ def install_skill(
         if destination_file.exists() and filecmp.cmp(source / "SKILL.md", destination_file, shallow=False):
             results.append(InstallResult(target, destination, "unchanged"))
             continue
+        if destination.exists() and not force:
+            results.append(InstallResult(target, destination, "skipped-existing"))
+            continue
         if dry_run:
             action = "would-update" if destination.exists() else "would-create"
             results.append(InstallResult(target, destination, action))
-            continue
-        if destination.exists() and not force:
-            results.append(InstallResult(target, destination, "skipped-existing"))
             continue
 
         if destination.exists():
